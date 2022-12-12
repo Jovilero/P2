@@ -81,13 +81,15 @@ bfrm = np.array([[0,0,-0.014,0.72],[0,0,0,-0.018],[0,0,-0.01,-0.495]])
 gps = np.array([[0],[0],[0]])
 
 coordenadasCamara=[]
+
 for i in range(len(VRSgeo.index)):
 
     r = datosInercial["Roll (deg)"][i]
     p = datosInercial["Pitch (deg)"][i]
     y = datosInercial["Yaw (deg)"][i]
     dec = VRSaux["decl"][i]
-    utm=mf.bfrm2efrm(ang,VRSgeo["latitud"][i],VRSgeo["longitud"][i],VRSgeo["altura"][i],r,p,y,dec,bfrm,gps)
+    N=VRSaux['N'][i]
+    utm=mf.bfrm2efrm(ang,VRSgeo["latitud"][i],VRSgeo["longitud"][i],VRSgeo["altura"][i],r,p,y,N,dec,bfrm,gps)
     coordenadasCamara.append(utm[3])
 
 

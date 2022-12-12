@@ -138,7 +138,7 @@ def kickoutOutLayers(pandasdataframe,column):
 
 
 
-def bfrm2efrm(ang,lat,lon,h,r,p,y,dec,xbfrm,xbgps):
+def bfrm2efrm(ang,lat,lon,h,r,p,y,N,dec,xbfrm,xbgps):
     ang_m = pd.DataFrame(ang,columns=['alpha(º)','beta(º)','gamma(º)'],index=['PLA','GPS','INS','CAM'])
     bfrm_m = pd.DataFrame(xbfrm,index=['x1(m)','x2(m)','x3(m)'],columns=['PLA','GPS','INS','CAM']).T
     lla_m = []
@@ -155,7 +155,8 @@ def bfrm2efrm(ang,lat,lon,h,r,p,y,dec,xbfrm,xbgps):
     Cen = rot_ne(m.radians(lon),m.radians(lat))
     # Coodenadas xgegps
     trans = pj.Transformer.from_crs(4326,4978)
-    x,y,z = trans.transform(lat,lon,h)
+    x,y,z = trans.transform(lat,lon,h-N)
+    # print(trans.transform(lat,lon,h))
     xgegps = np.array([[x],[y],[z]])
     # XE y coordenadas ECEF
     # xe=xegps+cen * cnins* cinsb(xb-xbgps)
@@ -179,3 +180,7 @@ def bfrm2efrm(ang,lat,lon,h,r,p,y,dec,xbfrm,xbgps):
 
     return utm
     
+
+
+
+
