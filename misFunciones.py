@@ -31,20 +31,23 @@ def rot_mat(a,b,g):
     return rotacion
 
 def rot_ne(lat,lon):
-    #Matriz de rotación estandar de los tres ejes
+    #Matriz de rotación estandar
     rotacion = np.array([[m.cos(-lon),m.sin(-lon),0],[-m.sin(-lon),m.cos(-lon),0],[0,0,1]]).dot(np.array([[m.cos(lat+m.pi/2),0,-m.sin(lat+m.pi/2)],[0,1,0],[m.sin(lat+m.pi/2),0,m.cos(lat+m.pi/2)]]))
     return rotacion
 
 def gms_to_gd(valor):
+    if str(valor).isnumeric():
+        grados = m.trunc(valor)
 
-    grados = m.trunc(valor)
-    minutos = m.modf(valor)[0]*60
-    segundos = m.modf(minutos)[0]*60
+        minutos = m.modf(valor)[0]*60
     
-    if (minutos < 0 or segundos < 0):
-        return "-"+str(grados)+'º'+str(int(abs(minutos)))+"'"+str(round(abs(segundos),5))+"''"
+        segundos = m.modf(minutos)[0]*60
     
-    return str(grados)+'º'+str(int(minutos))+"'"+str(round(segundos,5))+"''"
+        if (minutos < 0 or segundos < 0):
+            return "-"+str(grados)+'º'+str(int(abs(minutos)))+"'"+str(round(abs(segundos),5))+"''"
+        
+        return str(grados)+'º'+str(int(minutos))+"'"+str(round(segundos,5))+"''"
+
 
 
 pd.options.display.float_format = "{:.4f}".format
@@ -55,26 +58,6 @@ pd.options.display.float_format = "{:.4f}".format
 def File2Pandas(path):
     pa=pd.read_fwf(fr'{path}',index=False, header=None)
     return pa
-
-def walkpath(ext):
-    dic={}
-    keys=[]
-    for this_tuple in os.walk(os.path.abspath(os.curdir)):
-        # print(this_tuple)
-        for each_dir in this_tuple:
-            if type(each_dir)==list:
-                for each_file in each_dir:
-                    if each_file.endswith(f'.{ext}') or each_file.endswith(f'{ext}')  :
-                        # print(fr'{this_tuple[0]}\{each_file}')
-                        try:
-                            pa=pd.read_csv(fr'{this_tuple[0]}\{each_file}',delim_whitespace=True, header=None, on_bad_lines='skip')
-                        except:
-                            pa=pd.read_csv(fr'{this_tuple[0]}\{each_file}',delim_whitespace=False, header=None, on_bad_lines='skip')
-                        dic[each_file]=pa
-                        keys.append(each_file)
- 
-        
-    return dic, keys
 
 
 def getPlot(datos1,datos2,x,y1,y2,y3='',linea1='',linea2='',title=''):
@@ -97,7 +80,7 @@ def getPlot(datos1,datos2,x,y1,y2,y3='',linea1='',linea2='',title=''):
     datos2[y1]=np.where(datos2[y1]==0, np.nan,datos2[y1])
     axs[0].plot(datos1[x], datos1[y1], datos2[x], datos2[y1], linewidth=0.45)
     
-    
+
     datos1[y2]=np.where(datos1[y2]==0, np.nan,datos1[y2])
     datos2[y2]=np.where(datos2[y2]==0, np.nan,datos2[y2])
     axs[1].plot(datos1[x], datos1[y2], datos2[x], datos2[y2], linewidth=0.45)
@@ -111,7 +94,6 @@ def getPlot(datos1,datos2,x,y1,y2,y3='',linea1='',linea2='',title=''):
     axs[1].set_ylabel(f'{y2}')
     axs[2].set_ylabel(f'{y3}')
 
-    
     axs[0].grid()
     axs[1].grid()
     axs[2].grid()
@@ -150,18 +132,21 @@ def bfrm2efrm(ang,lat,lon,h,r,p,y,N,dec,xbfrm,xbgps):
     # Calculamos matriz Cnins
     Cnins = rot_mat(m.radians(-r),m.radians(-p),m.radians(-y))
     # Declinacion
-    r = r3(m.radians(-dec))
+    r33 = r3(m.radians(-dec))
+    
     # Calculamos matriz Cen
     Cen = rot_ne(m.radians(lon),m.radians(lat))
     # Coodenadas xgegps
     trans = pj.Transformer.from_crs(4326,4978)
     x,y,z = trans.transform(lat,lon,h-N)
-    # print(trans.transform(lat,lon,h))
     xgegps = np.array([[x],[y],[z]])
     # XE y coordenadas ECEF
+
     # xe=xegps+cen * cnins* cinsb(xb-xbgps)
-    xe = np.add(xgegps,Cen.dot(r).dot(Cnins).dot(Cinsb).dot(np.subtract(xbfrm,xbgps)))
-    ecef = pd.DataFrame(xe,index=['X(m)','Y(m)','Z(m)'],columns=['PLA','GPS','INS','CAM']).T
+    # del norte magnetico al norte geográfico
+    xe = np.add(xgegps,Cen.dot(r33).dot(Cnins).dot(Cinsb).dot(np.subtract(xbfrm,xbgps)))
+    XYZecef = pd.DataFrame(xe,index=['X(m)','Y(m)','Z(m)'],columns=['PLA','GPS','INS','CAM']).T
+    
     #Coordenadas Geodesicas
     ecef = pj.Proj(proj='geocent', ellps='WGS84', datum='WGS84')
     lla = pj.Proj(proj='latlong', ellps='WGS84', datum='WGS84')
@@ -176,11 +161,27 @@ def bfrm2efrm(ang,lat,lon,h,r,p,y,N,dec,xbfrm,xbgps):
     for i in range(len(lla_m2)):
         xx,yy,zz = trans2.transform(lla_m2[i][1],lla_m2[i][0],lla_m2[i][2])
         utm.append([xx,yy,zz])
-    tm = pd.DataFrame(utm,columns=['x(m)','y(m)','Z(m)'],index=['PLA','GPS','INS','CAM'])
-
+    XYZutm = pd.DataFrame(utm,columns=['x(m)','y(m)','Z(m)'],index=['PLA','GPS','INS','CAM'])
+    # print(tm)
     return utm
     
 
+def aceleracionesInercial(r,p,y,aX,aY,aZ):
+    aceleracionesNED = rot_mat(m.radians(-r),m.radians(-p),m.radians(-y)).dot(np.array([[aX],[aY],[aZ]])).T
+    
+    return aceleracionesNED[0][0],aceleracionesNED[0][1], aceleracionesNED[0][2]
 
+def dif_Posicion(latitud,h,vN,vE,vD,ro,nu):
+    difLatitud=vN*0.02/(ro+h)
+    difLongitud=(vE*0.02/(nu+h))*np.cos(latitud)
+    difH=-vD*0.02
+    return difLatitud, difLongitud, difH
 
+def ecuInercialLibre(latitud,dif_latitud,dif_longitud,aN, aE, aD, vN, vE, vD, gN, gE, gD, we):
+    
+    dif_vN=aN+gN+2*we*vE*np.sin(latitud)+dif_latitud*vD-dif_longitud*np.sin(latitud)*vE
+    dif_vE=aE+gE+2*we*np.sin(latitud)*vN+2*we*np.cos(latitud)*vD+dif_longitud*np.sin(latitud)*vN+dif_longitud*np.cos(latitud)*vD
+    dif_vD=aD+gD+2*we*np.cos(latitud)*vE-dif_longitud*np.cos(latitud)*vE-dif_latitud*vN
 
+    return np.array([[dif_vN*0.02],[dif_vE*0.02],[dif_vD*0.02]])
+    
