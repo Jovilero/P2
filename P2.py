@@ -14,7 +14,7 @@ import misFunciones as mf
 
 
 #%% Carga de los datos
-sesion='ses0'
+sesion='ses4re'
 
 datosInercial=pd.read_csv(fr'.\Datos\INS\INS-20-10-2022_{sesion}.dat',delim_whitespace=True, header=None)
 kinINS=pd.read_csv(fr'.\Datos\INS\INS-20-10-2022_{sesion}.kin',delim_whitespace=True, header=None)
@@ -33,9 +33,9 @@ VRSaux.columns=         ["anyo", "mes", "dia", "hora", "min", "seg", "longitud",
 
 #Columna de fechas
 datosInercial['Fecha y hora']=mf.getDateAndTimefromPandasDataframe(datosInercial)
-VRSgeo['Fecha y hora']=mf.getDateAndTimefromPandasDataframe(VRSgeo)
-kinGNSS['Fecha y hora']=mf.getDateAndTimefromPandasDataframe(kinGNSS)
-kinINS['Fecha y hora']=mf.getDateAndTimefromPandasDataframe(kinINS)
+VRSgeo['Fecha y hora']       =mf.getDateAndTimefromPandasDataframe(VRSgeo)
+kinGNSS['Fecha y hora']      =mf.getDateAndTimefromPandasDataframe(kinGNSS)
+kinINS['Fecha y hora']       =mf.getDateAndTimefromPandasDataframe(kinINS)
  
 #correccion del desfase temporal del tiempo UTC-GPS (18 segundos) en los datos del Inercial
 datosInercial["Fecha y hora"]=datosInercial.apply(lambda x: (x["Fecha y hora"]+datetime.timedelta(seconds=18)),axis=1)
@@ -155,13 +155,13 @@ for i in range(len(datosInercial.index)):
     n=INSaux['N'][i]
       
     utm=mf.bfrm2efrm(ang,latlonInercial["lat"][i],latlonInercial["lon"][i],latlonInercial["h"][i],r,p,y,n,dec,bfrm,ins)
+   
+    if str(i).endswith('0'):
+        print(i)
     coordenadasCamara.append(utm[3])
 
 #Coordenadas de la camara:
 XYZcamara=pd.DataFrame(coordenadasCamara,columns=["X","Y","Z"])
-# mf.kickoutOutLayers(XYZcamara,"X")
-# mf.kickoutOutLayers(XYZcamara,"Y")
-# mf.kickoutOutLayers(XYZcamara,"Z")
 
 XYZcamara.to_csv("Ejercicio2b_inercial.csv",sep=',',header=True,encoding="utf-8")
 # print(df)
